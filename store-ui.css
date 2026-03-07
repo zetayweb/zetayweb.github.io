@@ -1,4 +1,4 @@
-/* ================= 商店页面 - 货币显示框 ================= */
+/* ================= 商店页面 - 货币显示框 (保持不变) ================= */
 .currency-container {
     position: fixed;
     top: 110px;
@@ -17,7 +17,6 @@
     min-width: 120px;
     box-shadow: 0 0 15px rgba(0, 210, 255, 0.1);
     transition: all 0.3s ease;
-    /* 关键：使用 Flex 列布局，让按钮垂直排列在金额下方 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -46,19 +45,16 @@
     font-family: "Consolas", "Courier New", monospace;
 }
 
-/* ZY 信用点特殊颜色 (绿色) */
 .currency-box.zy-credit .currency-value {
     color: #00ff88;
     text-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
 }
 
-/* 莱尔币特殊颜色 (金色) */
 .currency-box.lyr-coin .currency-value {
     color: #ffd700;
     text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
 }
 
-/* ================= 黑市入口按钮 (在商店页) ================= */
 .blackmarket-btn {
     display: block;
     width: 100%;
@@ -84,7 +80,7 @@
     text-decoration: none;
 }
 
-/* ================= 商店页面 - Kestro 水印 (高亮清晰版) ================= */
+/* ================= 商店页面 - Kestro 水印 (保持不变) ================= */
 .kestro-watermark {
     position: fixed;
     top: 50%;
@@ -93,7 +89,6 @@
     font-size: 5em;
     font-weight: 900;
     color: rgba(200, 240, 255, 0.25);
-    /* 多重阴影叠加，制造强烈的霓虹发光感 */
     text-shadow: 
         0 0 10px rgba(0, 210, 255, 0.8),
         0 0 20px rgba(0, 210, 255, 0.6),
@@ -104,7 +99,6 @@
     z-index: 1;
     white-space: nowrap;
     animation: pulse-watermark-clear 3s infinite ease-in-out;
-    /* 描边增加清晰度 */
     -webkit-text-stroke: 1px rgba(0, 210, 255, 0.5);
 }
 
@@ -121,26 +115,35 @@
     }
 }
 
-/* ================= 商店页面 - 商品网格布局 ================= */
+/* ================= 商店页面 - 商品网格布局 (已修正位置) ================= */
 .store-grid {
     position: fixed;
     top: 110px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 1400px;
+    /* 修改：不再使用 left: 50% + transform，而是使用左右边距自动填充 */
+    left: 5%;   /* 左侧留出 5% 空间，避免太靠左或被终端遮挡 */
+    right: 340px; /* 右侧留出足够空间给货币框 (约 300px + 间隙)，防止重叠 */
     height: calc(100vh - 130px);
+    
     display: grid;
-    /* 自适应列宽，最小 300px */
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    /* 自适应列宽，最小 280px (稍微调小一点以容纳更多列) */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
     padding: 20px;
     overflow-y: auto;
     z-index: 800;
     box-sizing: border-box;
-    /* 隐藏滚动条但保留功能 (可选) */
+    
+    /* 优化滚动条 */
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 210, 255, 0.5) rgba(0, 0, 0, 0.3);
+}
+
+/* 针对大屏幕上进一步居中优化 */
+@media (min-width: 1600px) {
+    .store-grid {
+        left: 10%; /* 大屏下左侧留白更多，视觉更居中 */
+        right: 10%; /* 右侧也对称留白 */
+    }
 }
 
 .loading-hint, .error-msg {
@@ -153,7 +156,7 @@
 }
 .error-msg { color: #ff4d4d; text-shadow: 0 0 10px rgba(255, 77, 77, 0.3); }
 
-/* ================= 商品卡片样式 ================= */
+/* ================= 商品卡片样式 (保持不变) ================= */
 .store-card {
     background: rgba(0, 210, 255, 0.05);
     border: 1px solid rgba(0, 210, 255, 0.2);
@@ -207,11 +210,10 @@
     color: rgba(255, 255, 255, 0.7);
     margin-bottom: 15px;
     line-height: 1.4;
-    flex-grow: 1; /* 让描述占据剩余空间，确保底部按钮对齐 */
+    flex-grow: 1;
     font-style: italic;
 }
 
-/* ================= 属性列表样式 ================= */
 .card-stats {
     background: rgba(0, 0, 0, 0.4);
     border-radius: 6px;
@@ -242,12 +244,6 @@
     text-shadow: 0 0 2px rgba(0,0,0,0.8);
 }
 
-/* 属性颜色微调 */
-.stat-val[data-stat="hacker"] { color: #00d2ff; }
-.stat-val[data-stat="zy"] { color: #00ff88; }
-.stat-val[data-stat="lyr"] { color: #ffd700; }
-
-/* ================= 购买按钮样式 ================= */
 .card-btn {
     width: 100%;
     padding: 12px;
@@ -291,10 +287,11 @@
 /* ================= 响应式调整 ================= */
 @media (max-width: 768px) {
     .store-grid {
-        width: 95%;
-        grid-template-columns: 1fr; /* 手机端单列显示 */
+        left: 5%;
+        right: 5%;
         top: 100px;
         height: calc(100vh - 120px);
+        grid-template-columns: 1fr;
     }
     
     .currency-container {
