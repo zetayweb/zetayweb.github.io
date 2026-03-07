@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZetaY | 黑市 - Slaster Underground</title>
+    <link rel="stylesheet" href="core.css">
+    <link rel="stylesheet" href="blackmarket-ui.css">
+</head>
+<body>
+    <!-- 页眉 (保持一致) -->
+    <header class="fade-in">
+        <nav>
+            <ul>
+                <li><a href="store.html">商店</a></li>
+                <li><a href="#loadout">配置</a></li>
+                <li><a href="index.html" class="home-btn">主页面</a></li>
+                <li><a href="#mission">任务</a></li>
+                <li><a href="#stats">统计</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- 注意：黑市没有水印 -->
+
+    <!-- 货币显示框 (保持一致，但按钮不同) -->
+    <div class="currency-container fade-in">
+        <div class="currency-box zy-credit">
+            <div class="currency-label">ZY 信用点</div>
+            <div class="currency-value" id="zyCredit">10000</div>
+        </div>
+        <div class="currency-box lyr-coin">
+            <div class="currency-label">莱尔币</div>
+            <div class="currency-value" id="lyrCoin">1</div>
+            <!-- 黑市页特有：返回 Kestro 按钮 -->
+            <a href="store.html" class="return-kestro-btn">返回 Kestro</a>
+        </div>
+    </div>
+
+    <!-- 黑市提示文字 (替代水印，更隐蔽) -->
+    <div class="underground-hint fade-in">SLASTER_UNDERGROUND_CONNECTION_ESTABLISHED</div>
+
+    <main></main>
+
+    <script>
+        const Cookie = {
+            get: (name) => {
+                const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? decodeURIComponent(match[2]) : null;
+            }
+        };
+
+        function initCurrency() {
+            let zyCredit = Cookie.get('zyCredit') || 10000;
+            let lyrCoin = Cookie.get('lyrCoin') || 1;
+            document.getElementById('zyCredit').textContent = Number(zyCredit).toLocaleString();
+            document.getElementById('lyrCoin').textContent = lyrCoin;
+        }
+        initCurrency();
+    </script>
+</body>
+</html>

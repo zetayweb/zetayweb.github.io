@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZetaY | 商店 - Kestro</title>
+    <link rel="stylesheet" href="core.css">
+    <link rel="stylesheet" href="store-ui.css">
+</head>
+<body>
+    <!-- 页眉 -->
+    <header class="fade-in">
+        <nav>
+            <ul>
+                <li><a href="store.html">商店</a></li>
+                <li><a href="#loadout">配置</a></li>
+                <li><a href="index.html" class="home-btn">主页面</a></li>
+                <li><a href="#mission">任务</a></li>
+                <li><a href="#stats">统计</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Kestro 版本水印 -->
+    <div class="kestro-watermark fade-in">Kestro2.7.41</div>
+
+    <!-- 货币显示框 -->
+    <div class="currency-container fade-in">
+        <div class="currency-box zy-credit">
+            <div class="currency-label">ZY 信用点</div>
+            <div class="currency-value" id="zyCredit">0</div>
+        </div>
+        <div class="currency-box lyr-coin">
+            <div class="currency-label">莱尔币</div>
+            <div class="currency-value" id="lyrCoin">0</div>
+            <a href="blackmarket.html" class="blackmarket-btn">进入黑市</a>
+        </div>
+    </div>
+
+    <!-- 商品列表容器 -->
+    <div class="store-grid fade-in" id="storeGrid">
+        <!-- 商品将通过 JS 动态生成 -->
+        <div class="loading-hint">正在从 Kestro 服务器加载商品数据...</div>
+    </div>
+
+    <main></main>
+
+    <script>
+        // ===== Cookie 工具 (货币) =====
+        const Cookie = {
+            get: (name) => {
+                const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? decodeURIComponent(match[2]) : null;
+            },
+            set: (name, value, days = 365) => {
+                const expires = new Date(Date.now() + days * 864e5).toUTCString();
+                document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+            }
+        };
+
+        // ===== LocalStorage 工具 (库存) =====
+        const Inventory = {
+            get: () => {
+                const data = localStorage.getItem('zetay_inventory');
+                return data ? JSON.parse(data) : [];
+            },
+            add: (itemId) => {
+                const current = Inventory.get();
+                if (!current.includes(itemId)) {
+                    current.push(itemId);
+                    localStorage.setItem('zetay_inventory', JSON.stringify(current));
+                    alert('购买成功！物品已存入视界镜背包。');
+                    renderStore(); // 重新渲染以更新按钮状态
+                    updateCurrencyDisplay(); // 刷新余额
+                } else {
+                    alert('您已拥有此物品！');
+                }
+            },
+            has: (itemId) => {
+                return Inventory.get().includes(itemId);
+            }
+        };
+
+        // ===== 初始化货币显示 =====
+        function updateCurrencyDisplay() {
+            let zyCredit = Cookie.get('zyCredit');
+            if (zyCredit === null) { zyCredit = 10000; Cookie.set('zyCredit', zyCredit); }
+            
+            let lyrCoin = Cookie.get('lyrCoin');
+            if (lyrCoin === null) { lyrCoin = 1; Cookie.set('lyrCoin', lyrCoin); }
+
+            document.getElementById('zyCredit').textContent = Number(zyCredit).toLocaleString();
+            document.getElementById('lyrCoin').textContent = lyrCoin;
+            return { zy: Number(zyCredit), lyr: Number(lyrCoin) };
+        }
+
+        // ===== 加载并解析 TXT 商品列表 =====
+        async function loadProducts() {
+            const grid = document.getElementById('storeGrid');
+            try {
+                // 请求 products.txt 文件
+                const response = await fetch('products.txt');
+                if (!response.ok) throw new Error("无法连接 Kestro 数据库");
+                const text = await response.text();
+                
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const products = lines.map((line, index) => {
+                    const parts = line.split('|');
+                    return {
+                        id: `item_${index}`,
+                        name: parts[0],
+                        desc: parts[1],
+                        price: parseInt(parts[2]),
+                        stats: {
+                            efficiency: parseFloat(parts[3]),
+                            stamina: parseFloat(parts[4]),
+                            hacker: parseFloat(parts[5]),
+                            agility: parseFloat(parts[6]),
+                            strength: parseFloat(parts[7]),
+                            zyMult: parseFloat(parts[8]),
+                            lyrMult: parseFloat(parts[9])
+                        }
+                    };
+                });
+
+                renderStore(products);
+
+            } catch (error) {
+                grid.innerHTML = `<div class="error-msg">连接失败：${error.message}<br>请确保 products.txt 存在于同一目录下。</div>`;
+            }
+        }
+
+        // ===== 渲染商品列表 =====
+        function renderStore(products) {
+            const grid = document.getElementById('storeGrid');
+            if (!products || products.length === 0) return;
+
+            let html = '';
+            products.forEach((p, index) => {
+                const owned = Inventory.has(p.id);
+                const btnClass = owned ? 'btn-owned' : 'btn-buy';
+                const btnText = owned ? '已拥有' : `购买 (-${p.price.toLocaleString()} ZY)`;
+                const btnAction = owned ? '' : `onclick="buyItem('${p.id}', ${p.price})"`;
+                
+                // 动画延迟
+                const delay = index * 0.05;
+
+                html += `
+                <div class="store-card fade-in" style="animation-delay: ${delay}s">
+                    <div class="card-header">
+                        <h3 class="card-title">${p.name}</h3>
+                        <span class="card-price">${p.price.toLocaleString()} ZY</span>
+                    </div>
+                    <div class="card-desc">${p.desc}</div>
+                    
+                    <div class="card-stats">
+                        <div class="stat-row"><span class="stat-label">效率:</span> <span class="stat-val">${p.stats.efficiency > 0 ? '+' : ''}${p.stats.efficiency}</span></div>
+                        <div class="stat-row"><span class="stat-label">体力:</span> <span class="stat-val">${p.stats.stamina > 0 ? '+' : ''}${p.stats.stamina}</span></div>
+                        <div class="stat-row"><span class="stat-label">黑客:</span> <span class="stat-val" style="color:#00d2ff">${p.stats.hacker > 0 ? '+' : ''}${p.stats.hacker}</span></div>
+                        <div class="stat-row"><span class="stat-label">敏捷:</span> <span class="stat-val">${p.stats.agility > 0 ? '+' : ''}${p.stats.agility}</span></div>
+                        <div class="stat-row"><span class="stat-label">力量:</span> <span class="stat-val">${p.stats.strength > 0 ? '+' : ''}${p.stats.strength}</span></div>
+                        <div class="stat-row"><span class="stat-label">ZY 获取:</span> <span class="stat-val" style="color:#00ff88">x${p.stats.zyMult}</span></div>
+                        <div class="stat-row"><span class="stat-label">LYR 获取:</span> <span class="stat-val" style="color:#ffd700">x${p.stats.lyrMult}</span></div>
+                    </div>
+
+                    <button class="card-btn ${btnClass}" ${btnAction}>${btnText}</button>
+                </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        // ===== 购买逻辑 =====
+        window.buyItem = function(id, price) {
+            const balance = updateCurrencyDisplay();
+            if (balance.zy >= price) {
+                const newBalance = balance.zy - price;
+                Cookie.set('zyCredit', newBalance);
+                Inventory.add(id);
+                updateCurrencyDisplay();
+            } else {
+                alert('ZY 信用点不足！请联系 U.L.B. 银行或前往黑市。');
+            }
+        };
+
+        // 初始化
+        updateCurrencyDisplay();
+        loadProducts();
+    </script>
+</body>
+</html>

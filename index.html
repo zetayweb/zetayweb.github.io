@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZetaY | 视界之外</title>
+    <!-- 1. 核心样式 -->
+    <link rel="stylesheet" href="core.css">
+    <!-- 2. 主页特有组件样式 -->
+    <link rel="stylesheet" href="index-widgets.css">
+</head>
+<body>
+    <!-- 页眉 -->
+    <header class="fade-in">
+        <nav>
+            <ul>
+                <li><a href="store.html">商店</a></li>
+                <li><a href="#loadout">配置</a></li>
+                <li><a href="index.html" class="home-btn">主页面</a></li>
+                <li><a href="#mission">任务</a></li>
+                <li><a href="#stats">统计</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- 代码终端 -->
+    <div class="widget fade-in" id="terminalWidget">
+        <div class="widget-content" id="terminalContent">
+            <div class="code-block">
+                <div class="widget-line">> SYSTEM_INIT... DONE</div>
+                <div class="widget-line">> ZONE: ZINOSLAR_OLD</div>
+                <div class="widget-line">> TEMP: -10.5°C</div>
+                <div class="widget-line">> OPDEX_LEVEL: STABLE</div>
+                <div class="widget-line">> CRT_LINK: ENCRYPTED</div>
+                <div class="widget-line">> USER_ID: TeacoThecat</div>
+                <div class="widget-line">> LOAD: VISION_MIRROR_V2.4</div>
+                <div class="widget-line">> NETWORK: ECHO_SECURE</div>
+                <div class="widget-line">> WARNING: RADIATION_STORM</div>
+                <div class="widget-line">> DISTANCE: 3.00 HOURS</div>
+                <div class="widget-line">> BANK: ULB_SYNC_FAIL</div>
+                <div class="widget-line">> CURRENCY: ZY_CREDIT</div>
+                <div class="widget-line">> BLACK_HOLE_VISIBILITY: HIGH</div>
+                <div class="widget-line">> FACTION: UNKNOWN</div>
+                <div class="widget-line">> WAITING_FOR_INPUT...</div>
+                <div class="widget-line">> _</div>
+            </div>
+            <div class="code-block">
+                <div class="widget-line">> SYSTEM_INIT... DONE</div>
+                <div class="widget-line">> ZONE: ZINOSLAR_OLD</div>
+                <div class="widget-line">> TEMP: -10.5°C</div>
+                <div class="widget-line">> OPDEX_LEVEL: STABLE</div>
+                <div class="widget-line">> CRT_LINK: ENCRYPTED</div>
+                <div class="widget-line">> USER_ID: TeacoThecat</div>
+                <div class="widget-line">> LOAD: VISION_MIRROR_V2.4</div>
+                <div class="widget-line">> NETWORK: ECHO_SECURE</div>
+                <div class="widget-line">> WARNING: RADIATION_STORM</div>
+                <div class="widget-line">> DISTANCE: 3.00 HOURS</div>
+                <div class="widget-line">> BANK: ULB_SYNC_FAIL</div>
+                <div class="widget-line">> CURRENCY: ZY_CREDIT</div>
+                <div class="widget-line">> BLACK_HOLE_VISIBILITY: HIGH</div>
+                <div class="widget-line">> FACTION: UNKNOWN</div>
+                <div class="widget-line">> WAITING_FOR_INPUT...</div>
+                <div class="widget-line">> _</div>
+            </div>
+        </div>
+        <div class="resize-handle"></div>
+    </div>
+
+    <!-- 聊天室 -->
+    <div class="widget fade-in" id="chatWidget">
+        <div class="chat-watermark">Echo1.3.04</div>
+        <div class="widget-content" id="chatContent"></div>
+        <div class="resize-handle"></div>
+    </div>
+
+    <!-- 电子钟 -->
+    <div class="widget fade-in" id="clockWidget">
+        <div class="clock-watermark">ZetaY</div>
+        <div class="widget-content" id="clockContent">
+            <div class="clock-time" id="clockTime">00:00:00</div>
+            <div class="clock-date" id="clockDate">2462 ZY</div>
+        </div>
+        <div class="resize-handle"></div>
+    </div>
+
+    <main></main>
+
+    <script>
+        // ===== localStorage 保存/加载工具 =====
+        const Storage = {
+            save: (key, data) => localStorage.setItem('zetay_' + key, JSON.stringify(data)),
+            load: (key) => { const data = localStorage.getItem('zetay_' + key); return data ? JSON.parse(data) : null; }
+        };
+
+        // ===== 窗口拖拽缩放通用逻辑 =====
+        function initWidget(widgetId, contentId, baseWidth, baseFontSize, basePadding) {
+            const widget = document.getElementById(widgetId);
+            const content = document.getElementById(contentId);
+            const handle = widget.querySelector('.resize-handle');
+            let isDragging = false, isResizing = false;
+            let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+            const saved = Storage.load(widgetId);
+            if (saved) {
+                widget.style.left = saved.left + 'px'; widget.style.top = saved.top + 'px';
+                widget.style.width = saved.width + 'px'; widget.style.height = saved.height + 'px';
+                content.style.fontSize = (baseFontSize * (saved.width / baseWidth)) + 'px';
+                widget.style.padding = (basePadding * (saved.width / baseWidth)) + 'px';
+            }
+
+            const saveConfig = () => {
+                Storage.save(widgetId, { left: widget.offsetLeft, top: widget.offsetTop, width: parseInt(widget.style.width), height: parseInt(widget.style.height) });
+            };
+
+            widget.addEventListener('mousedown', (e) => {
+                if (e.target === handle) return;
+                isDragging = true; startX = e.clientX; startY = e.clientY;
+                startLeft = widget.offsetLeft; startTop = widget.offsetTop;
+                widget.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) { widget.style.left = `${startLeft + e.clientX - startX}px`; widget.style.top = `${startTop + e.clientY - startY}px`; }
+                if (isResizing) {
+                    let w = Math.max(150, startWidth + e.clientX - startX), h = Math.max(100, startHeight + e.clientY - startY);
+                    widget.style.width = `${w}px`; widget.style.height = `${h}px`;
+                    const ratio = w / baseWidth;
+                    content.style.fontSize = `${baseFontSize * ratio}px`; widget.style.padding = `${basePadding * ratio}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging || isResizing) saveConfig();
+                isDragging = false; isResizing = false; widget.style.cursor = 'move';
+            });
+
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true; startX = e.clientX; startY = e.clientY;
+                startWidth = parseInt(getComputedStyle(widget).width); startHeight = parseInt(getComputedStyle(widget).height);
+                e.stopPropagation();
+            });
+        }
+
+        initWidget('terminalWidget', 'terminalContent', 280, 12, 10);
+        initWidget('chatWidget', 'chatContent', 300, 11, 10);
+        initWidget('clockWidget', 'clockContent', 200, 14, 10);
+
+        // ===== 聊天内容随机生成 =====
+        const users = ["夜行者","穹顶之下","斯拉斯特之影","频瓦商人","科诺矿工","革新者 07","旧守职员","海尼斯游客","芜镇居民","霍瓦黑客","CRT 内部","ULB 用户","Echo 匿名","ViloKey 主","Kestro 买家"];
+        const messages = ["辐射风暴还有 3 小时，有人一起囤货吗？","中心城的信用点汇率又涨了...","斯拉斯特那边今晚有黑市交易","CRT 又在搞什么秘密实验？","苍白沙漠的矿场又死人了","革新派在老城区有地下据点","视界镜今天又卡顿了","有人出莱尔币吗？急用","频瓦区的无人机配送太慢了","听说 OPDEX 能量重新出现了","旧守派的税收越来越离谱","海尼斯度假区门票打五折","芜镇的房价跌到谷底了","黑洞今晚可见度超高","Echo 上有人曝光政府文件"];
+
+        function createChatBlock() {
+            let html = '';
+            for (let i = 0; i < 10; i++) {
+                const user = users[Math.floor(Math.random() * users.length)];
+                const msg = messages[Math.floor(Math.random() * messages.length)];
+                html += `<div class="chat-item"><div class="chat-avatar">${user.charAt(0)}</div><div class="chat-body"><div class="chat-name">${user}</div><div class="chat-bubble">${msg}</div></div></div>`;
+            }
+            return html;
+        }
+        document.getElementById('chatContent').innerHTML = createChatBlock() + createChatBlock();
+
+        // ===== 电子钟 =====
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clockTime').textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            document.getElementById('clockDate').textContent = `2462 ZY · ${now.getMonth()+1}/${now.getDate()}`;
+        }
+        updateClock(); setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
