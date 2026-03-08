@@ -1,72 +1,76 @@
-/* ================= 全局禁止选中 (新增) ================= */
-body {
-    user-select: none; /* 禁止选中任何文字 */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-
-/* 允许在输入框中选中 (如果有需要) */
-input, textarea {
-    user-select: text;
-    -webkit-user-select: text;
-}
-
-/* ================= 商店页面 - 货币显示框 (已改为可拖拽悬浮窗) ================= */
-.currency-container {
+/* ================= 通用窗口基类 (复用核心逻辑) ================= */
+.widget {
     position: fixed;
-    /* 初始位置：右上角，但留有余地 */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    z-index: 950; /* 高于商品网格 */
+    padding: 10px;
+    box-sizing: border-box;
+    opacity: 0.9;
+    cursor: move; /* 默认鼠标为移动状态 */
+    user-select: none; /* 禁止选中 */
+    min-width: 200px;
+    /* 初始位置，会被 JS 覆盖 */
     top: 110px;
     right: 20px; 
-    /* 移除之前的 flex 布局限制，让它作为一个整体块 */
+}
+
+.widget-content {
+    position: relative; /* 改为 relative，不再绝对定位 */
+    width: 100%;
+    user-select: none;
+    cursor: default;
+    pointer-events: none; /* 内容区域不响应鼠标事件，让父级处理拖拽 */
+}
+
+/* 让内部的按钮和链接可以点击 */
+.widget-content a, .widget-content button, .widget-content .currency-value {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* ================= 货币显示框特定样式 ================= */
+.currency-widget {
+    border-color: rgba(0, 210, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.1), inset 0 0 20px rgba(0, 210, 255, 0.05);
+    background: rgba(0, 210, 255, 0.05);
+    backdrop-filter: blur(5px);
+    /* 移除固定宽高，自适应内容 */
+    width: auto; 
+    height: auto;
+    min-width: 240px;
+    min-height: auto;
+}
+
+.currency-container {
     display: flex;
     gap: 15px;
-    z-index: 950;
-    
-    /* 悬浮窗样式 */
-    background: rgba(0, 210, 255, 0.08);
-    border: 1px solid rgba(0, 210, 255, 0.3);
-    border-radius: 12px;
-    padding: 15px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 20px rgba(0, 210, 255, 0.15);
-    
-    /* 关键：允许溢出可见，且内容不换行 */
-    white-space: nowrap;
-    
-    /* 鼠标样式 */
-    cursor: move; 
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    /* 移除 position fixed，由父级控制位置 */
+    position: static; 
 }
 
-.currency-container:hover {
-    box-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
-    background: rgba(0, 210, 255, 0.12);
-    /* 拖拽时不移动位置，只改变光影 */
-    transform: scale(1.02); 
-}
-
-/* 内部盒子样式微调 */
 .currency-box {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 210, 255, 0.1);
+    border: 1px solid rgba(0, 210, 255, 0.3);
     border-radius: 8px;
     padding: 10px 15px;
     text-align: center;
-    min-width: 100px;
+    min-width: 110px;
+    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    /* 防止内部元素干扰拖拽判断 */
-    pointer-events: none; 
+    user-select: none; /* 再次确保内部不可选 */
 }
 
-/* 让按钮和链接可以点击 (覆盖 pointer-events) */
-.currency-box a, 
-.currency-box button {
-    pointer-events: auto;
-    cursor: pointer;
+.currency-box:hover {
+    background: rgba(0, 210, 255, 0.2);
+    box-shadow: 0 0 25px rgba(0, 210, 255, 0.3);
+    transform: translateY(-2px);
 }
 
 .currency-label {
@@ -74,6 +78,7 @@ input, textarea {
     color: rgba(255, 255, 255, 0.6);
     letter-spacing: 1px;
     text-transform: uppercase;
+    user-select: none;
 }
 
 .currency-value {
@@ -82,6 +87,7 @@ input, textarea {
     color: #00d2ff;
     text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
     font-family: "Consolas", "Courier New", monospace;
+    user-select: none;
 }
 
 .currency-box.zy-credit .currency-value { color: #00ff88; text-shadow: 0 0 12px rgba(0, 255, 136, 0.6); }
@@ -98,9 +104,10 @@ input, textarea {
     border-radius: 4px;
     text-decoration: none;
     transition: all 0.3s ease;
+    cursor: pointer;
     letter-spacing: 1px;
     font-weight: bold;
-    margin-top: 4px;
+    user-select: none;
 }
 .blackmarket-btn:hover {
     background: rgba(255, 77, 77, 0.3);
@@ -109,19 +116,7 @@ input, textarea {
     text-decoration: none;
 }
 
-/* 拖拽提示小点 (装饰用) */
-.drag-hint {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 4px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    pointer-events: none;
-}
-
-/* ================= 商店页面 - Kestro 水印 (保持不变) ================= */
+/* ================= 商店页面 - Kestro 水印 ================= */
 .kestro-watermark {
     position: fixed;
     top: 50%; left: 50%;
@@ -136,19 +131,19 @@ input, textarea {
     white-space: nowrap;
     animation: pulse-watermark-clear 3s infinite ease-in-out;
     -webkit-text-stroke: 1px rgba(0, 210, 255, 0.5);
-    user-select: none; /* 确保水印也不可选中 */
+    user-select: none;
 }
 @keyframes pulse-watermark-clear {
     0%, 100% { opacity: 0.25; transform: translate(-50%, -50%) scale(1); }
     50% { opacity: 0.45; transform: translate(-50%, -50%) scale(1.02); }
 }
 
-/* ================= 商店页面 - 商品网格布局 (保持不变) ================= */
+/* ================= 商店页面 - 商品网格布局 ================= */
 .store-grid {
     position: fixed;
     top: 110px;
     left: 5%;
-    right: 340px; /* 留出空间给可能移过来的货币框，或者让用户自己拖开 */
+    right: 340px; /* 留出空间给可能移开的货币框，或者让用户自己拖开 */
     height: calc(100vh - 130px);
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -157,6 +152,7 @@ input, textarea {
     overflow-y: auto;
     z-index: 800;
     box-sizing: border-box;
+    pointer-events: auto;
 }
 .loading-hint, .error-msg {
     grid-column: 1 / -1;
@@ -168,7 +164,7 @@ input, textarea {
 }
 .error-msg { color: #ff4d4d; }
 
-/* ================= 商品卡片样式 (保持不变) ================= */
+/* ================= 商品卡片样式 ================= */
 .store-card {
     background: rgba(0, 210, 255, 0.05);
     border: 1px solid rgba(0, 210, 255, 0.2);
@@ -179,14 +175,16 @@ input, textarea {
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    user-select: none; /* 卡片内容也不可选中 */
+    user-select: none; /* 卡片内容不可选 */
 }
+
 .store-card:hover {
     background: rgba(0, 210, 255, 0.1);
     border-color: rgba(0, 210, 255, 0.6);
     box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
     transform: translateY(-3px);
 }
+
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -195,6 +193,7 @@ input, textarea {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 6px;
 }
+
 .card-title {
     font-size: 0.95em;
     font-weight: bold;
@@ -207,14 +206,18 @@ input, textarea {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    user-select: none;
 }
+
 .card-price {
     font-size: 0.85em;
     color: #00ff88;
     font-weight: bold;
     white-space: nowrap;
     text-shadow: 0 0 5px rgba(0, 255, 136, 0.4);
+    user-select: none;
 }
+
 .card-desc {
     font-size: 0.75em;
     color: rgba(255, 255, 255, 0.6);
@@ -227,7 +230,9 @@ input, textarea {
     overflow: hidden;
     font-style: italic;
     min-height: 2.6em;
+    user-select: none;
 }
+
 .card-stats {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 4px;
@@ -239,15 +244,18 @@ input, textarea {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 4px 8px;
+    user-select: none;
 }
+
 .stat-row {
     display: flex;
     justify-content: space-between;
     color: rgba(255, 255, 255, 0.8);
     margin: 0;
 }
-.stat-label { color: rgba(255, 255, 255, 0.4); text-transform: uppercase; font-size: 0.9em; }
-.stat-val { font-weight: bold; text-shadow: 0 0 2px rgba(0,0,0,0.8); }
+
+.stat-label { color: rgba(255, 255, 255, 0.4); text-transform: uppercase; font-size: 0.9em; user-select: none;}
+.stat-val { font-weight: bold; text-shadow: 0 0 2px rgba(0,0,0,0.8); user-select: none;}
 
 .card-btn {
     width: 100%;
@@ -263,6 +271,7 @@ input, textarea {
     margin-top: auto;
     user-select: none;
 }
+
 .btn-buy {
     background: rgba(0, 210, 255, 0.15);
     color: #00d2ff;
@@ -273,6 +282,7 @@ input, textarea {
     box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
     color: #ffffff;
 }
+
 .btn-owned {
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.3);
@@ -282,11 +292,9 @@ input, textarea {
 
 /* ================= 响应式调整 ================= */
 @media (max-width: 768px) {
-    .store-grid { left: 5%; right: 5%; grid-template-columns: 1fr; }
-    .currency-container {
-        top: 100px; right: 10px;
-        transform: scale(0.85);
-        transform-origin: top right;
+    .store-grid {
+        left: 5%; right: 5%;
+        grid-template-columns: 1fr;
     }
     .kestro-watermark { font-size: 3em; }
 }
