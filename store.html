@@ -24,22 +24,27 @@
     <!-- Kestro 版本水印 -->
     <div class="kestro-watermark fade-in">Kestro2.7.41</div>
 
-    <!-- 货币显示框 -->
-    <div class="currency-container fade-in">
-        <div class="currency-box zy-credit">
-            <div class="currency-label">ZY 信用点</div>
-            <div class="currency-value" id="zyCredit">0</div>
+    <!-- 货币显示框 (改为可拖拽模式) -->
+    <div class="currency-widget fade-in" id="currencyWidget">
+        <div class="currency-header">
+            <span class="widget-title">U.L.B. 账户概览</span>
+            <div class="drag-hint">:::</div>
         </div>
-        <div class="currency-box lyr-coin">
-            <div class="currency-label">莱尔币</div>
-            <div class="currency-value" id="lyrCoin">0</div>
+        <div class="currency-content">
+            <div class="currency-row">
+                <div class="currency-label">ZY 信用点</div>
+                <div class="currency-value zy-credit" id="zyCredit">0</div>
+            </div>
+            <div class="currency-row">
+                <div class="currency-label">莱尔币</div>
+                <div class="currency-value lyr-coin" id="lyrCoin">0</div>
+            </div>
             <a href="blackmarket.html" class="blackmarket-btn">进入黑市</a>
         </div>
     </div>
 
     <!-- 商品列表容器 -->
     <div class="store-grid fade-in" id="storeGrid">
-        <!-- 商品将通过 JS 动态生成 -->
         <div class="loading-hint">正在从 Kestro 服务器加载商品数据...</div>
     </div>
 
@@ -58,26 +63,31 @@
             }
         };
 
-        // ===== LocalStorage 工具 (库存) =====
-        const Inventory = {
-            get: () => {
+        // ===== LocalStorage 工具 (库存 & 位置) =====
+        const Storage = {
+            getInventory: () => {
                 const data = localStorage.getItem('zetay_inventory');
                 return data ? JSON.parse(data) : [];
             },
-            add: (itemId) => {
-                const current = Inventory.get();
+            addItem: (itemId) => {
+                const current = Storage.getInventory();
                 if (!current.includes(itemId)) {
                     current.push(itemId);
                     localStorage.setItem('zetay_inventory', JSON.stringify(current));
                     alert('购买成功！物品已存入视界镜背包。');
-                    renderStore(); // 重新渲染以更新按钮状态
-                    updateCurrencyDisplay(); // 刷新余额
+                    renderStore(); 
+                    updateCurrencyDisplay();
                 } else {
                     alert('您已拥有此物品！');
                 }
             },
-            has: (itemId) => {
-                return Inventory.get().includes(itemId);
+            hasItem: (itemId) => Storage.getInventory().includes(itemId),
+            
+            // 保存/加载窗口位置
+            savePos: (id, x, y) => localStorage.setItem(`zetay_pos_${id}`, JSON.stringify({x, y})),
+            loadPos: (id) => {
+                const data = localStorage.getItem(`zetay_pos_${id}`);
+                return data ? JSON.parse(data) : null;
             }
         };
 
@@ -94,11 +104,75 @@
             return { zy: Number(zyCredit), lyr: Number(lyrCoin) };
         }
 
+        // ===== 拖拽逻辑 (仅货币框) =====
+        function initDraggableWidget(widgetId) {
+            const widget = document.getElementById(widgetId);
+            const header = widget.querySelector('.currency-header');
+            
+            // 加载位置
+            const savedPos = Storage.loadPos(widgetId);
+            if (savedPos) {
+                widget.style.left = savedPos.x + 'px';
+                widget.style.top = savedPos.y + 'px';
+                widget.style.right = 'auto'; // 清除默认的 right 定位
+            }
+
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                // 获取当前计算后的 left/top 值
+                const rect = widget.getBoundingClientRect();
+                // 如果之前是用 right 定位的，需要先转换为 left
+                if (widget.style.right !== 'auto' && widget.style.left === '') {
+                    widget.style.left = (window.innerWidth - rect.right) + 'px';
+                    widget.style.top = rect.top + 'px';
+                    widget.style.right = 'auto';
+                    initialLeft = window.innerWidth - rect.right;
+                    initialTop = rect.top;
+                } else {
+                    initialLeft = widget.offsetLeft;
+                    initialTop = widget.offsetTop;
+                }
+
+                widget.style.cursor = 'grabbing';
+                e.preventDefault(); // 防止选中文本
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                let newLeft = initialLeft + dx;
+                let newTop = initialTop + dy;
+
+                // 边界限制 (可选，防止拖出屏幕太远)
+                // if (newTop < 90) newTop = 90; // 不低于页眉
+
+                widget.style.left = `${newLeft}px`;
+                widget.style.top = `${newTop}px`;
+                widget.style.right = 'auto';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    widget.style.cursor = 'grab';
+                    // 保存位置
+                    Storage.savePos(widgetId, widget.offsetLeft, widget.offsetTop);
+                }
+            });
+        }
+
         // ===== 加载并解析 TXT 商品列表 =====
         async function loadProducts() {
             const grid = document.getElementById('storeGrid');
             try {
-                // 请求 products.txt 文件
                 const response = await fetch('products.txt');
                 if (!response.ok) throw new Error("无法连接 Kestro 数据库");
                 const text = await response.text();
@@ -137,12 +211,10 @@
 
             let html = '';
             products.forEach((p, index) => {
-                const owned = Inventory.has(p.id);
+                const owned = Storage.hasItem(p.id);
                 const btnClass = owned ? 'btn-owned' : 'btn-buy';
                 const btnText = owned ? '已拥有' : `购买 (-${p.price.toLocaleString()} ZY)`;
                 const btnAction = owned ? '' : `onclick="buyItem('${p.id}', ${p.price})"`;
-                
-                // 动画延迟
                 const delay = index * 0.05;
 
                 html += `
@@ -176,7 +248,7 @@
             if (balance.zy >= price) {
                 const newBalance = balance.zy - price;
                 Cookie.set('zyCredit', newBalance);
-                Inventory.add(id);
+                Storage.addItem(id);
                 updateCurrencyDisplay();
             } else {
                 alert('ZY 信用点不足！请联系 U.L.B. 银行或前往黑市。');
@@ -185,6 +257,7 @@
 
         // 初始化
         updateCurrencyDisplay();
+        initDraggableWidget('currencyWidget'); // 初始化拖拽
         loadProducts();
     </script>
 </body>
